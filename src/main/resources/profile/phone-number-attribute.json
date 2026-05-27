@@ -1,0 +1,16 @@
+{
+  "name": "phoneNumber",
+  "displayName": "${phoneNumberLabel}",
+  "validations": {
+    "phone-number": {
+      "defaultCountryCode": "55"
+    }
+  },
+  "permissions": {
+    "view": ["admin", "user"],
+    "edit": ["admin", "user"]
+  },
+  "required": {
+    "roles": ["user"]
+  }
+}
