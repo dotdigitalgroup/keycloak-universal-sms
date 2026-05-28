@@ -150,7 +150,7 @@ public class GenericHttpSmsSender implements SmsSender {
      * Masks the middle digits of a phone number for safe log output.
      * E.g. {@code +8801712345678} → {@code +880171****678}
      */
-    static String mask(String phoneNumber) {
+    public static String mask(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.length() < 8) return "****";
         int len = phoneNumber.length();
         return phoneNumber.substring(0, 4) + "****" + phoneNumber.substring(len - 3);

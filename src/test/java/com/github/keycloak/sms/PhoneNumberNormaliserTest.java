@@ -20,6 +20,8 @@ class PhoneNumberNormaliserTest {
         "+1 (800) 555-0100,        '',           +18005550100",
         "00447700900000,           '',           +447700900000",
         "01234567890,              1,            +11234567890",
+        "+55 (11) 91234-5678,      55,           +5511912345678",
+        "011912345678,             55,           +5511912345678",
     })
     void normalisesVariousFormats(String raw, String countryCode, String expected) {
         String cc = (countryCode == null || countryCode.trim().isEmpty()) ? null : countryCode.trim();
