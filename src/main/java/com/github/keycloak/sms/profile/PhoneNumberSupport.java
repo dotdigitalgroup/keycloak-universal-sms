@@ -8,8 +8,10 @@ import org.keycloak.userprofile.UserProfileAttributeValidationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Normalises phone numbers and optionally rewrites user-profile attribute values.
@@ -52,6 +54,48 @@ public final class PhoneNumberSupport {
             return null;
         }
         return PhoneNumberNormaliser.normalise(raw.trim(), emptyCountryCodeToNull(defaultCountryCode));
+    }
+
+    /**
+     * E.164 variants to try when looking up a user by {@code phoneNumber} (e.g. phone-number-form).
+     * First candidate is {@link #normalise}; an extra candidate prepends {@code defaultCountryCode}
+     * for bare national numbers without {@code +}, {@code 00}, or leading {@code 0}.
+     *
+     * @throws IllegalArgumentException when no candidate can be built
+     */
+    public static Set<String> searchCandidates(String raw, String defaultCountryCode) {
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        if (raw == null || raw.trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number must not be blank");
+        }
+
+        String trimmed = raw.trim();
+        String cc = emptyCountryCodeToNull(defaultCountryCode);
+
+        try {
+            candidates.add(PhoneNumberNormaliser.normalise(trimmed, cc));
+        } catch (IllegalArgumentException ignored) {
+            // may still add country-code-prefixed bare candidate below
+        }
+
+        if (cc != null) {
+            try {
+                PhoneNumberNormaliser.StrippedPhone stripped = PhoneNumberNormaliser.stripFormatting(trimmed);
+                if (!stripped.hasPlus() && !stripped.startsWith00() && !stripped.startsWith0()) {
+                    String digits = stripped.digits();
+                    if (digits.matches("\\d+") && !digits.startsWith(cc)) {
+                        candidates.add("+" + cc + digits);
+                    }
+                }
+            } catch (IllegalArgumentException ignored) {
+                // no bare candidate
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            throw new IllegalArgumentException("Phone number is not a valid search candidate");
+        }
+        return candidates;
     }
 
     public static void rewriteProfileAttribute(ValidationContext context, String normalized) {
