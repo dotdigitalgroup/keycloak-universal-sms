@@ -13,6 +13,7 @@ public final class PhoneNumberInputs {
 
     public static final String MSG_INVALID = "phoneNumberInvalid";
     public static final String MSG_REQUIRED = "phoneNumberRequired";
+    public static final String MSG_NOT_FOUND = "phoneNumberNotFound";
 
     private PhoneNumberInputs() {
     }
