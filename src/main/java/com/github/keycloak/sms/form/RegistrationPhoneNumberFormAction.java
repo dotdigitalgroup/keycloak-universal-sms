@@ -47,8 +47,7 @@ public class RegistrationPhoneNumberFormAction implements FormAction {
         }
 
         try {
-            String normalized = PhoneNumberSupport.normalise(raw, resolveCountryCode(context));
-            formData.putSingle(PhoneNumberInputs.FORM_FIELD, normalized);
+            PhoneNumberSupport.searchKey(raw, resolveCountryCode(context));
             context.success();
         } catch (IllegalArgumentException e) {
             context.validationError(
@@ -60,13 +59,21 @@ public class RegistrationPhoneNumberFormAction implements FormAction {
     @Override
     public void success(FormContext context) {
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
-        String normalized = formData.getFirst(PhoneNumberInputs.FORM_FIELD);
-        if (normalized == null || normalized.isBlank()) {
+        String raw = formData.getFirst(PhoneNumberInputs.FORM_FIELD);
+        if (raw == null || raw.isBlank()) {
             return;
         }
         UserModel user = context.getUser();
-        if (user != null) {
-            user.setSingleAttribute(PhoneNumberInputs.ATTRIBUTE, normalized);
+        if (user == null) {
+            return;
+        }
+        user.setSingleAttribute(PhoneNumberInputs.ATTRIBUTE, raw.trim());
+        try {
+            user.setSingleAttribute(
+                    PhoneNumberInputs.SEARCH_ATTRIBUTE,
+                    PhoneNumberSupport.searchKey(raw, resolveCountryCode(context)));
+        } catch (IllegalArgumentException e) {
+            PhoneNumberSupport.logNormaliseFailure(raw, user.getUsername(), e);
         }
     }
 

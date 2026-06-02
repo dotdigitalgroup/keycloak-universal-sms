@@ -53,8 +53,9 @@ public class UpdatePhoneNumberRequiredAction implements RequiredActionProvider {
         }
 
         try {
-            String normalized = PhoneNumberSupport.normalise(raw, resolveCountryCode(context));
-            user.setSingleAttribute(PhoneNumberInputs.ATTRIBUTE, normalized);
+            String searchKey = PhoneNumberSupport.searchKey(raw, resolveCountryCode(context));
+            user.setSingleAttribute(PhoneNumberInputs.ATTRIBUTE, raw.trim());
+            user.setSingleAttribute(PhoneNumberInputs.SEARCH_ATTRIBUTE, searchKey);
             user.removeRequiredAction(PROVIDER_ID);
             context.success();
         } catch (IllegalArgumentException e) {
