@@ -49,8 +49,8 @@
         <!-- Align with target Keycloak server (e.g. OpenShift image 26.0.x) -->
         <keycloak.version>26.0.7</keycloak.version>
 
-        <!-- Logging -->
-        <slf4j.version>1.7.36</slf4j.version>
+        <!-- Logging (native Keycloak/Quarkus facade) -->
+        <jboss-logging.version>3.5.3.Final</jboss-logging.version>
 
         <!-- Plugin versions -->
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
@@ -100,11 +100,14 @@
         </dependency>
 
         <!-- ===== Logging ===== -->
-        <!-- SLF4J is provided by Keycloak/JBoss at runtime -->
+        <!-- jboss-logging is the native Keycloak/Quarkus logging facade (provided at runtime).
+             Using it (instead of slf4j) avoids an org.slf4j split-package conflict with other
+             fat-jar providers (e.g. keycloak-to-rabbit) that bundle slf4j-api, which breaks
+             'kc build' with a NullPointerException during Quarkus bootstrap logging. -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+            <version>${jboss-logging.version}</version>
             <scope>provided</scope>
         </dependency>
 
