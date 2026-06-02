@@ -3,9 +3,9 @@
 
 <@layout.registrationLayout displayInfo=false; section>
     <#if section = "header">
-        ${msg("collectPhoneNumberTitle")}
+        ${msg("phoneNumberFormTitle")}
     <#elseif section = "form">
-        <form id="kc-collect-phone-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
+        <form id="kc-phone-number-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
             <@phone.phoneNumberField />
             <div class="${properties.kcFormGroupClass!}">
                 <div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">

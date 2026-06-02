@@ -177,7 +177,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
     public String getHelpText() {
         return "Sends a one-time password via any SMS gateway configured through the " +
                "Admin Console. Supports GET and POST gateways with a customisable " +
-               "payload template. Compatible with Keycloak 17+ (Quarkus-based).";
+               "payload template. Compatible with Keycloak 17–26 (Quarkus-based).";
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.github.keycloak.sms;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -39,7 +38,7 @@ import java.nio.charset.StandardCharsets;
  */
 public class GenericHttpSmsSender implements SmsSender {
 
-    private static final Logger log = LoggerFactory.getLogger(GenericHttpSmsSender.class);
+    private static final Logger log = Logger.getLogger(GenericHttpSmsSender.class);
 
     /** Connection / read timeout in milliseconds. */
     private static final int TIMEOUT_MS = 10_000;
@@ -76,7 +75,7 @@ public class GenericHttpSmsSender implements SmsSender {
         // Expand placeholders in URL (useful for GET-based gateways)
         String resolvedUrl = expand(apiUrl, phoneNumber, code);
 
-        log.info("Sending SMS to {} via {} {}", mask(phoneNumber), httpMethod, resolvedUrl);
+        log.infof("Sending SMS to %s via %s %s", mask(phoneNumber), httpMethod, resolvedUrl);
 
         HttpURLConnection conn = null;
         try {
@@ -110,21 +109,21 @@ public class GenericHttpSmsSender implements SmsSender {
 
             int status = conn.getResponseCode();
             if (status >= 200 && status < 300) {
-                log.info("SMS dispatched successfully to {} (HTTP {})", mask(phoneNumber), status);
+                log.infof("SMS dispatched successfully to %s (HTTP %s)", mask(phoneNumber), status);
             } else {
                 String responseBody = readErrorStream(conn);
-                log.error("Gateway returned HTTP {} for {}: {}", status, mask(phoneNumber), responseBody);
+                log.errorf("Gateway returned HTTP %s for %s: %s", status, mask(phoneNumber), responseBody);
                 throw new SmsSendException(
                         "SMS gateway returned non-success status " + status + " for " + mask(phoneNumber),
                         status);
             }
 
         } catch (SocketTimeoutException e) {
-            log.error("Timeout contacting SMS gateway for {}", mask(phoneNumber), e);
+            log.errorf(e, "Timeout contacting SMS gateway for %s", mask(phoneNumber));
             throw new SmsSendException(
                     "SMS gateway timed out after " + TIMEOUT_MS + " ms for " + mask(phoneNumber), e);
         } catch (IOException e) {
-            log.error("I/O error contacting SMS gateway for {}", mask(phoneNumber), e);
+            log.errorf(e, "I/O error contacting SMS gateway for %s", mask(phoneNumber));
             throw new SmsSendException(
                     "I/O error contacting SMS gateway: " + e.getMessage(), e);
         } finally {

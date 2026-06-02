@@ -7,13 +7,13 @@
 
     <groupId>io.github.shahrear002</groupId>
     <artifactId>keycloak-universal-sms</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
 
     <name>Keycloak Universal SMS Authenticator</name>
     <description>
         A provider-agnostic Keycloak SMS Authenticator SPI compatible with
-        Keycloak 17+ (Quarkus-based). Supports any SMS gateway via a
+        Keycloak 17–26 (Quarkus-based). Supports any SMS gateway via a
         configurable GenericHttpSmsSender.
     </description>
     <url>https://github.com/Shahrear002/keycloak-universal-sms</url>
@@ -41,16 +41,16 @@
     </scm>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Keycloak version — bump to match your server -->
-        <keycloak.version>24.0.4</keycloak.version>
+        <!-- Align with target Keycloak server (e.g. OpenShift image 26.0.x) -->
+        <keycloak.version>26.0.7</keycloak.version>
 
-        <!-- Logging -->
-        <slf4j.version>1.7.36</slf4j.version>
+        <!-- Logging (native Keycloak/Quarkus facade) -->
+        <jboss-logging.version>3.5.3.Final</jboss-logging.version>
 
         <!-- Plugin versions -->
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
@@ -100,11 +100,14 @@
         </dependency>
 
         <!-- ===== Logging ===== -->
-        <!-- SLF4J is provided by Keycloak/JBoss at runtime -->
+        <!-- jboss-logging is the native Keycloak/Quarkus logging facade (provided at runtime).
+             Using it (instead of slf4j) avoids an org.slf4j split-package conflict with other
+             fat-jar providers (e.g. keycloak-to-rabbit) that bundle slf4j-api, which breaks
+             'kc build' with a NullPointerException during Quarkus bootstrap logging. -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+            <version>${jboss-logging.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -222,8 +225,15 @@
                                     <exclude>org.keycloak:*</exclude>
                                     <exclude>org.slf4j:*</exclude>
                                     <exclude>org.jboss.logging:*</exclude>
+                                    <exclude>jakarta.*:*</exclude>
+                                    <exclude>javax.*:*</exclude>
+                                    <exclude>io.quarkus:*</exclude>
+                                    <exclude>org.jboss:*</exclude>
                                 </excludes>
                             </artifactSet>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>

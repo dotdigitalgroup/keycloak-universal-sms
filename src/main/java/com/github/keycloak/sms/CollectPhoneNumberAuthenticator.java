@@ -53,8 +53,9 @@ public class CollectPhoneNumberAuthenticator implements Authenticator {
         }
 
         try {
-            String normalized = PhoneNumberSupport.normalise(raw, resolveCountryCode(context));
-            user.setSingleAttribute(PhoneNumberInputs.ATTRIBUTE, normalized);
+            String searchKey = PhoneNumberSupport.searchKey(raw, resolveCountryCode(context));
+            user.setSingleAttribute(PhoneNumberInputs.ATTRIBUTE, raw.trim());
+            user.setSingleAttribute(PhoneNumberInputs.SEARCH_ATTRIBUTE, searchKey);
             context.success();
         } catch (IllegalArgumentException e) {
             PhoneNumberSupport.logNormaliseFailure(raw, user.getUsername(), e);

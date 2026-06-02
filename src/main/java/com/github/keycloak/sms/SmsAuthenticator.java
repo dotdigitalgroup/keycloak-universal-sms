@@ -7,8 +7,7 @@ import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
@@ -34,7 +33,7 @@ import java.util.Map;
  */
 public class SmsAuthenticator implements Authenticator {
 
-    private static final Logger log = LoggerFactory.getLogger(SmsAuthenticator.class);
+    private static final Logger log = Logger.getLogger(SmsAuthenticator.class);
 
     static final String NOTE_CODE      = "sms_code";
     static final String NOTE_TTL       = "sms_code_ttl";
@@ -55,7 +54,7 @@ public class SmsAuthenticator implements Authenticator {
         // Retrieve phone from user attribute
         String rawPhone = user.getFirstAttribute("phoneNumber");
         if (rawPhone == null || rawPhone.trim().isEmpty()) {
-            log.warn("User {} has no phoneNumber attribute; cannot send SMS", user.getUsername());
+            log.warnf("User %s has no phoneNumber attribute; cannot send SMS", user.getUsername());
             context.failureChallenge(
                     AuthenticationFlowError.INVALID_USER,
                     context.form()
@@ -72,7 +71,7 @@ public class SmsAuthenticator implements Authenticator {
         try {
             phone = PhoneNumberNormaliser.normalise(rawPhone, countryCode);
         } catch (IllegalArgumentException e) {
-            log.warn("Could not normalise phone '{}' for user {}: {}",
+            log.warnf("Could not normalise phone '%s' for user %s: %s",
                      GenericHttpSmsSender.mask(rawPhone), user.getUsername(), e.getMessage());
             context.failureChallenge(
                     AuthenticationFlowError.INVALID_USER,
@@ -99,11 +98,11 @@ public class SmsAuthenticator implements Authenticator {
         // Send SMS — OTP is NEVER logged in plain text
         try {
             sender.send(phone, code);
-            log.info("OTP dispatched to {} for user {}", GenericHttpSmsSender.mask(phone), user.getUsername());
+            log.infof("OTP dispatched to %s for user %s", GenericHttpSmsSender.mask(phone), user.getUsername());
         } catch (SmsSendException e) {
-            log.error("Failed to send SMS to {} for user {} (HTTP {}): {}",
+            log.errorf(e, "Failed to send SMS to %s for user %s (HTTP %s): %s",
                       GenericHttpSmsSender.mask(phone), user.getUsername(),
-                      e.getHttpStatusCode(), e.getMessage(), e);
+                      e.getHttpStatusCode(), e.getMessage());
             context.failureChallenge(
                     AuthenticationFlowError.INTERNAL_ERROR,
                     context.form()
@@ -129,7 +128,7 @@ public class SmsAuthenticator implements Authenticator {
         MultivaluedMap<String, String> params = context.getHttpRequest().getDecodedFormParameters();
 
         if (params.containsKey("resend")) {
-            log.info("User {} requested a new OTP code", context.getUser().getUsername());
+            log.infof("User %s requested a new OTP code", context.getUser().getUsername());
             clearNotes(context);
             authenticate(context);
             return;
@@ -143,7 +142,7 @@ public class SmsAuthenticator implements Authenticator {
 
         // Guard: session data missing (e.g. session expired)
         if (storedCode == null || storedTtl == null) {
-            log.warn("SMS auth session notes missing for user {}; aborting",
+            log.warnf("SMS auth session notes missing for user %s; aborting",
                      context.getUser().getUsername());
             context.failureChallenge(
                     AuthenticationFlowError.EXPIRED_CODE,
@@ -156,7 +155,7 @@ public class SmsAuthenticator implements Authenticator {
         // TTL check
         long expiry = Long.parseLong(storedTtl);
         if (System.currentTimeMillis() > expiry) {
-            log.info("OTP expired for user {} ({})", context.getUser().getUsername(),
+            log.infof("OTP expired for user %s (%s)", context.getUser().getUsername(),
                      GenericHttpSmsSender.mask(phone));
             clearNotes(context);
             context.failureChallenge(
@@ -170,7 +169,7 @@ public class SmsAuthenticator implements Authenticator {
 
         // Code check (constant-time comparison to resist timing attacks)
         if (!constantTimeEquals(storedCode, submittedCode == null ? "" : submittedCode.trim())) {
-            log.warn("Invalid OTP submitted by user {}; sent to {}",
+            log.warnf("Invalid OTP submitted by user %s; sent to %s",
                      context.getUser().getUsername(), GenericHttpSmsSender.mask(phone));
             context.failureChallenge(
                     AuthenticationFlowError.INVALID_CREDENTIALS,
@@ -182,7 +181,7 @@ public class SmsAuthenticator implements Authenticator {
         }
 
         // Success
-        log.info("OTP validated successfully for user {} ({})",
+        log.infof("OTP validated successfully for user %s (%s)",
                  context.getUser().getUsername(), GenericHttpSmsSender.mask(phone));
         clearNotes(context);
         context.success();

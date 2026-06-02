@@ -2,7 +2,7 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.shahrear002/keycloak-universal-sms.svg?label=Maven%20Central)](https://search.maven.org/artifact/io.github.shahrear002/keycloak-universal-sms)
 
-A production-ready, provider-agnostic SMS Authenticator SPI for modern **Keycloak 17+ (Quarkus)**. 
+A production-ready, provider-agnostic SMS Authenticator SPI for **Keycloak 17–26 (Quarkus)**. 
 
 This plugin allows you to add SMS-based 2FA / OTP to your Keycloak authentication flows without writing custom Java code for specific SMS gateways (like Twilio, AWS SNS, Infobip, etc.). Instead, you configure your SMS gateway's REST API details directly in the Keycloak Admin Console.
 
@@ -14,7 +14,11 @@ This plugin allows you to add SMS-based 2FA / OTP to your Keycloak authenticatio
 - **Phone Normalisation**: Automatically cleans up user input, strips spaces, and converts local numbers to E.164 format.
 - **phoneNumber attribute**: Declarative User Profile validator, registration form action, required action, and collect-phone flow step with i18n (EN / pt-BR).
 - **Customisable UI**: Comes with a clean, responsive FreeMarker template (`sms-validation.ftl`) that you can override in your own theme.
-- **Zero Dependencies**: Uses standard Java 11+ HTTP clients; doesn't bloat your Keycloak deployment.
+- **Zero runtime dependencies**: Uses the JDK HTTP client only; the shaded JAR does not bundle Keycloak, SLF4J, or Jakarta APIs.
+
+### Keycloak version alignment
+
+Compile this project against the **same Keycloak version** as your server (see `keycloak.version` in `pom.xml`, currently **26.0.7**). Deploy `target/keycloak-universal-sms-*.jar` to `providers/`, then run `kc.sh build` before start.
 
 ---
 
@@ -27,23 +31,24 @@ If you are building a custom Keycloak distribution or want to include this in yo
 <dependency>
     <groupId>io.github.shahrear002</groupId>
     <artifactId>keycloak-universal-sms</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.2</version>
 </dependency>
 ```
 
 ### Option 2: Manual Build
 
 1. **Build the JAR**
-   Make sure you have JDK 11+ and Maven installed.
+   Requires **JDK 21** and Maven (or `make package`, which uses Docker).
    ```bash
-   mvn clean package
+   make package
+   # or: mvn clean package
    ```
-   This produces a fat JAR at `target/keycloak-universal-sms-1.0.0.jar`.
+   This produces a shaded JAR at `target/keycloak-universal-sms-1.0.2.jar`.
 
 2. **Deploy to Keycloak**
    Copy the generated JAR into your Keycloak `providers/` directory:
    ```bash
-   cp target/keycloak-universal-sms-1.0.0.jar /opt/keycloak/providers/
+   cp target/keycloak-universal-sms-1.0.2.jar /opt/keycloak/providers/
    ```
 
 3. **Rebuild Keycloak (Quarkus only)**

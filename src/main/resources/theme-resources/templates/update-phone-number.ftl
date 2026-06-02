@@ -15,4 +15,4 @@
             </div>
         </form>
     </#if>
-</@layout>
+</@layout.registrationLayout>

@@ -1,2 +1,3 @@
 com.github.keycloak.sms.SmsAuthenticatorFactory
 com.github.keycloak.sms.CollectPhoneNumberAuthenticatorFactory
+com.github.keycloak.sms.PhoneNumberFormAuthenticatorFactory
