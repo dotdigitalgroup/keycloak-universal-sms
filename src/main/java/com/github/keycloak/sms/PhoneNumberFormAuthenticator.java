@@ -49,9 +49,10 @@ public class PhoneNumberFormAuthenticator implements Authenticator {
             return;
         }
 
-        final Set<String> candidates;
+        String countryCode = resolveCountryCode(context);
+        final Set<String> searchKeys;
         try {
-            candidates = PhoneNumberSupport.searchCandidates(raw, resolveCountryCode(context));
+            searchKeys = PhoneNumberSupport.searchKeys(raw, countryCode);
         } catch (IllegalArgumentException e) {
             PhoneNumberSupport.logNormaliseFailure(raw, null, e);
             challengeNotFound(context);
@@ -61,10 +62,18 @@ public class PhoneNumberFormAuthenticator implements Authenticator {
         RealmModel realm = context.getRealm();
         KeycloakSession session = context.getSession();
         Map<String, UserModel> matches = new LinkedHashMap<>();
-        for (String candidate : candidates) {
+        for (String key : searchKeys) {
             session.users()
-                    .searchForUserByUserAttributeStream(realm, PhoneNumberInputs.ATTRIBUTE, candidate)
+                    .searchForUserByUserAttributeStream(realm, PhoneNumberInputs.SEARCH_ATTRIBUTE, key)
                     .forEach(user -> matches.putIfAbsent(user.getId(), user));
+        }
+
+        // Fallback for legacy users whose phoneNumber was set before the provider was
+        // installed and therefore lack the canonical phoneNumberSearch index. Scans users,
+        // canonicalises the stored (possibly masked) phoneNumber, and backfills the index
+        // on match so subsequent logins hit the fast indexed path.
+        if (matches.isEmpty()) {
+            matchByLegacyPhoneNumber(session, realm, searchKeys, countryCode, matches);
         }
 
         if (matches.size() != 1) {
@@ -80,6 +89,31 @@ public class PhoneNumberFormAuthenticator implements Authenticator {
 
         context.setUser(user);
         context.success();
+    }
+
+    private static void matchByLegacyPhoneNumber(KeycloakSession session, RealmModel realm,
+            Set<String> searchKeys, String countryCode, Map<String, UserModel> matches) {
+        session.users()
+                .searchForUserStream(realm, Map.of())
+                .forEach(user -> {
+                    String stored = user.getFirstAttribute(PhoneNumberInputs.ATTRIBUTE);
+                    if (stored == null || stored.trim().isEmpty()) {
+                        return;
+                    }
+                    String key;
+                    try {
+                        key = PhoneNumberSupport.searchKey(stored, countryCode);
+                    } catch (IllegalArgumentException e) {
+                        return;
+                    }
+                    if (key == null || !searchKeys.contains(key)) {
+                        return;
+                    }
+                    matches.putIfAbsent(user.getId(), user);
+                    if (user.getFirstAttribute(PhoneNumberInputs.SEARCH_ATTRIBUTE) == null) {
+                        user.setSingleAttribute(PhoneNumberInputs.SEARCH_ATTRIBUTE, key);
+                    }
+                });
     }
 
     private static void challengeNotFound(AuthenticationFlowContext context) {
