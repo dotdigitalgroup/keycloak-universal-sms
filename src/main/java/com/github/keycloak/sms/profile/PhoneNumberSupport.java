@@ -2,11 +2,11 @@ package com.github.keycloak.sms.profile;
 
 import com.github.keycloak.sms.GenericHttpSmsSender;
 import com.github.keycloak.sms.PhoneNumberNormaliser;
+import org.keycloak.models.UserModel;
 import org.keycloak.validate.ValidationContext;
 import org.keycloak.validate.ValidatorConfig;
 import org.keycloak.userprofile.UserProfileAttributeValidationContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -18,7 +18,7 @@ import java.util.Set;
  */
 public final class PhoneNumberSupport {
 
-    private static final Logger log = LoggerFactory.getLogger(PhoneNumberSupport.class);
+    private static final Logger log = Logger.getLogger(PhoneNumberSupport.class);
 
     private PhoneNumberSupport() {
     }
@@ -98,6 +98,53 @@ public final class PhoneNumberSupport {
         return candidates;
     }
 
+    /**
+     * Canonical digits-only search key (E.164 without the leading {@code +}) for {@code raw},
+     * or {@code null} when {@code raw} is blank.
+     *
+     * @throws IllegalArgumentException when the value is non-blank but invalid
+     */
+    public static String searchKey(String raw, String defaultCountryCode) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return null;
+        }
+        return PhoneNumberNormaliser.digitsOnly(
+                PhoneNumberNormaliser.normalise(raw.trim(), emptyCountryCodeToNull(defaultCountryCode)));
+    }
+
+    /**
+     * Digits-only search keys to look up a user by {@link PhoneNumberInputs#SEARCH_ATTRIBUTE}.
+     * Mirrors {@link #searchCandidates} but strips the leading {@code +} so masked/unmasked
+     * stored values converge on the same canonical index.
+     *
+     * @throws IllegalArgumentException when no candidate can be built
+     */
+    public static Set<String> searchKeys(String raw, String defaultCountryCode) {
+        Set<String> candidates = searchCandidates(raw, defaultCountryCode);
+        LinkedHashSet<String> keys = new LinkedHashSet<>();
+        for (String candidate : candidates) {
+            keys.add(PhoneNumberNormaliser.digitsOnly(candidate));
+        }
+        return keys;
+    }
+
+    /**
+     * Writes the canonical search index onto the user behind a declarative User Profile validation
+     * context. Direct model write bypasses the unmanaged-attribute policy so the index always
+     * persists. No-op when the user is not yet available (e.g. registration via User Profile),
+     * which is covered by the imperative write paths and the backfill.
+     */
+    public static void writeSearchAttribute(ValidationContext context, String searchKey) {
+        if (searchKey == null || !(context instanceof UserProfileAttributeValidationContext profileContext)) {
+            return;
+        }
+        UserModel user = profileContext.getAttributeContext().getUser();
+        if (user == null) {
+            return;
+        }
+        user.setSingleAttribute(PhoneNumberInputs.SEARCH_ATTRIBUTE, searchKey);
+    }
+
     public static void rewriteProfileAttribute(ValidationContext context, String normalized) {
         if (!(context instanceof UserProfileAttributeValidationContext profileContext)) {
             return;
@@ -114,7 +161,7 @@ public final class PhoneNumberSupport {
     }
 
     public static void logNormaliseFailure(String raw, String username, IllegalArgumentException e) {
-        log.warn("Could not normalise phone '{}' for user {}: {}",
+        log.warnf("Could not normalise phone '%s' for user %s: %s",
                 GenericHttpSmsSender.mask(raw), username, e.getMessage());
     }
 }

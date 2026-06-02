@@ -1,6 +1,5 @@
 package com.github.keycloak.sms.profile;
 
-import com.github.keycloak.sms.PhoneNumberNormaliser;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.provider.ConfiguredProvider;
 import org.keycloak.provider.ProviderConfigProperty;
@@ -47,8 +46,8 @@ public class PhoneNumberValidator extends AbstractStringValidator implements Con
     @Override
     protected void doValidate(String value, String inputHint, ValidationContext context, ValidatorConfig config) {
         try {
-            String normalized = PhoneNumberNormaliser.normalise(value, PhoneNumberSupport.countryCodeFromConfig(config));
-            PhoneNumberSupport.rewriteProfileAttribute(context, normalized);
+            String searchKey = PhoneNumberSupport.searchKey(value, PhoneNumberSupport.countryCodeFromConfig(config));
+            PhoneNumberSupport.writeSearchAttribute(context, searchKey);
         } catch (IllegalArgumentException e) {
             context.addError(new ValidationError(ID, inputHint, PhoneNumberInputs.MSG_INVALID));
         }
