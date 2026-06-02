@@ -8,6 +8,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("PhoneNumberSupport.searchCandidates")
 class PhoneNumberSupportTest {
@@ -60,5 +61,40 @@ class PhoneNumberSupportTest {
     assertEquals(
         List.of("+61986181809"),
         List.copyOf(PhoneNumberSupport.searchCandidates("61986181809", null)));
+  }
+
+  @Test
+  @DisplayName("searchKeys strips '+' from candidates")
+  void searchKeysStripsPlus() {
+    assertIterableEquals(
+        List.of("61986181809", "5561986181809"),
+        PhoneNumberSupport.searchKeys("61986181809", CC_BR));
+  }
+
+  @Test
+  @DisplayName("searchKey canonicalises each stored mask/format to digits-only E.164")
+  void searchKeyCanonicalises() {
+    assertEquals("61986181809", PhoneNumberSupport.searchKey("(61) 98618-1809", CC_BR));
+    assertEquals("61986181809", PhoneNumberSupport.searchKey("61986181809", CC_BR));
+    assertEquals("5561986181809", PhoneNumberSupport.searchKey("+55 (61) 98618-1809", CC_BR));
+    assertEquals("5561986181809", PhoneNumberSupport.searchKey("+5561986181809", CC_BR));
+  }
+
+  @Test
+  @DisplayName("bare national input matches every stored format via the search index")
+  void bareInputMatchesAllStoredFormats() {
+    var keys = PhoneNumberSupport.searchKeys("61986181809", CC_BR);
+    for (String stored : List.of(
+        "(61) 98618-1809", "61986181809", "+55 (61) 98618-1809", "+5561986181809")) {
+      assertTrue(
+          keys.contains(PhoneNumberSupport.searchKey(stored, CC_BR)),
+          "index for stored '" + stored + "' must be reachable from input keys");
+    }
+  }
+
+  @Test
+  @DisplayName("searchKey returns null for blank input")
+  void searchKeyBlank() {
+    assertEquals(null, PhoneNumberSupport.searchKey("   ", CC_BR));
   }
 }
